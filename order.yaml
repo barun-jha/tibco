@@ -1,19 +1,95 @@
+# =========================
+# Backstage Catalog (One File)
+# =========================
+
+# ---- Domain (optional but recommended)
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: telecom
+  title: Telecom
+  description: Domain for telecom OSS/BSS and order orchestration
+spec:
+  owner: group:team-order-ops
+---
+# ---- Owning team (Group)
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: team-order-ops
+  title: Team Order Ops
+  description: Team responsible for order orchestration services and integrations
+spec:
+  type: team
+  profile:
+    displayName: Order Operations
+    email: order-ops@telco.org
+    picture: https://avatars.githubusercontent.com/u/0?v=4
+  children: []
+---
+# ---- System
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: order-orchestration-system
+  title: Telecom Order Orchestration System
+  description: Manages the telecom order lifecycle across CRM, Billing, and Provisioning.
+  tags: [telecom, orders, orchestration]
+spec:
+  owner: group:team-order-ops
+  domain: telecom
+---
+# ---- Resources (infra dependencies)
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: postgres/order-db
+  description: PostgreSQL database for order persistence
+spec:
+  type: database
+  owner: group:team-order-ops
+  system: order-orchestration-system
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: kafka/order-topic
+  description: Kafka topic for order lifecycle event publishing
+spec:
+  type: messaging-topic
+  owner: group:team-order-ops
+  system: order-orchestration-system
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: redis/order-cache
+  description: Redis cache for order lookups and idempotency keys
+spec:
+  type: cache
+  owner: group:team-order-ops
+  system: order-orchestration-system
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: elasticsearch/order-index
+  description: Elasticsearch index for order search and analytics
+spec:
+  type: search-index
+  owner: group:team-order-ops
+  system: order-orchestration-system
+---
+# ---- Component (the service)
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: order-service
   title: Order Service
   description: >
-    The Order Service is a core telecom microservice responsible for orchestrating
-    customer order workflows across CRM, Billing, and Provisioning systems.
-    It ensures order validation, enrichment, decomposition, and fulfillment
-    through standardized APIs and asynchronous event flows.
-  tags:
-    - telecom
-    - microservice
-    - orders
-    - orchestration
-    - integration
+    Core telecom microservice orchestrating customer order workflows across
+    CRM, Billing, and Provisioning systems via REST and event-driven flows.
+  tags: [telecom, microservice, orders, orchestration, integration]
   labels:
     domain: order-management
     business-criticality: high
@@ -24,105 +100,261 @@ metadata:
     backstage.io/kubernetes-id: order-service
     backstage.io/kubernetes-namespace: telco-prod
     backstage.io/ci-build: https://github.com/telco-org/order-service/actions
-    backstage.io/docker-build: https://hub.docker.com/r/telco-org/order-service
+    backstage.io/view-url: https://github.com/telco-org/order-service/tree/main
     sonarcloud.io/project-key: telco-org_order-service
     pagerduty.com/service-id: P123456
     grafana/dashboard-url: https://grafana.telco.org/d/order-service
     kibana/dashboard-url: https://kibana.telco.org/app/discover#/order-service
     jira/project-key: ORDEROPS
+    argocd/app-url: https://argocd.telco.org/applications/order-service
 spec:
   type: service
   system: order-orchestration-system
   lifecycle: production
-  owner: team-order-ops
+  owner: group:team-order-ops
 
-  # -------------------------------
-  # API Relationships
-  # -------------------------------
+  # API relationships
   providesApis:
     - order-api
-
+    - order-events-api
   consumesApis:
     - customer-api
     - billing-api
     - provisioning-api
     - notification-api
 
-  # -------------------------------
-  # Dependencies (Infra / Messaging / Data)
-  # -------------------------------
+  # Infra deps
   dependsOn:
     - resource:postgres/order-db
     - resource:kafka/order-topic
     - resource:redis/order-cache
     - resource:elasticsearch/order-index
 
-  # -------------------------------
-  # Deployment Metadata (Custom Extension)
-  # -------------------------------
-  deployment:
-    environment: production
-    region: ap-south-1
-    replicas: 3
-    strategy: rolling-update
-    uptime-sla: "99.95%"
-    container:
-      image: telco-org/order-service:1.0.3
-      registry: docker.io
-      ports:
-        - name: http
-          port: 8080
-        - name: metrics
-          port: 9090
-      env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: prod
-        - name: LOG_LEVEL
-          value: INFO
-        - name: KAFKA_BROKER_URL
-          valueFrom:
-            secretKeyRef:
-              name: kafka-config
-              key: broker-url
-    autoscaling:
-      minReplicas: 3
-      maxReplicas: 10
-      cpuThreshold: 75
-    ingress:
-      host: order.telco.org
-      tls: true
-
-  # -------------------------------
-  # Monitoring, Documentation & Links
-  # -------------------------------
+  # Helpful quick links
   links:
     - url: https://github.com/telco-org/order-service
       title: Source Code
       icon: github
     - url: https://telco-org.github.io/order-service/
-      title: Documentation
+      title: TechDocs
       icon: docs
     - url: https://grafana.telco.org/d/order-service
-      title: Grafana Dashboard
+      title: Grafana
       icon: grafana
     - url: https://kibana.telco.org/app/discover#/order-service
-      title: Log Analysis
+      title: Logs (Kibana)
       icon: logs
-    - url: https://pagerduty.com/services/P123456
-      title: PagerDuty Alerts
-      icon: pagerduty
-    - url: https://jira.telco.org/projects/ORDEROPS
-      title: Jira Board
-      icon: jira
-    - url: https://confluence.telco.org/display/ORDEROPS/Order+Service+Design
-      title: Confluence Design Docs
-      icon: docs
     - url: https://argocd.telco.org/applications/order-service
-      title: ArgoCD Deployment
+      title: ArgoCD
       icon: kubernetes
-    - url: https://jenkins.telco.org/job/order-service/
-      title: Jenkins CI/CD Pipeline
-      icon: build
     - url: https://sonarcloud.io/dashboard?id=telco-org_order-service
-      title: SonarCloud Code Quality
+      title: SonarCloud
       icon: quality
+    - url: https://pagerduty.com/services/P123456
+      title: PagerDuty
+      icon: pagerduty
+---
+# ---- API (REST / OpenAPI)
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: order-api
+  title: Order API
+  description: REST API for creating and managing telecom orders.
+  tags: [rest, openapi, orders]
+  annotations:
+    github.com/project-slug: telco-org/order-service
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:team-order-ops
+  system: order-orchestration-system
+  definition:
+    $text: |
+      openapi: 3.0.1
+      info:
+        title: Order API
+        version: 1.0.0
+      servers:
+        - url: https://order.telco.org/api
+      paths:
+        /orders:
+          post:
+            summary: Create a new order
+            requestBody:
+              required: true
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/OrderRequest'
+            responses:
+              '201':
+                description: Created
+          get:
+            summary: List orders
+            parameters:
+              - name: customerId
+                in: query
+                schema: { type: string }
+            responses:
+              '200': { description: OK }
+        /orders/{orderId}:
+          get:
+            summary: Get order by ID
+            parameters:
+              - name: orderId
+                in: path
+                required: true
+                schema: { type: string }
+            responses:
+              '200': { description: OK }
+          patch:
+            summary: Update order status
+            requestBody:
+              required: true
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      status: { type: string }
+            responses:
+              '200': { description: Updated }
+          delete:
+            summary: Cancel order
+            responses:
+              '204': { description: Cancelled }
+      components:
+        schemas:
+          OrderRequest:
+            type: object
+            required: [customerId, productCode, quantity]
+            properties:
+              customerId: { type: string }
+              productCode: { type: string }
+              quantity: { type: integer, minimum: 1 }
+              attributes:
+                type: object
+                additionalProperties: true
+---
+# ---- API (Async / Kafka / AsyncAPI)
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: order-events-api
+  title: Order Events API
+  description: Kafka events emitted for order lifecycle changes.
+  tags: [async, kafka, events]
+  annotations:
+    github.com/project-slug: telco-org/order-service
+spec:
+  type: asyncapi
+  lifecycle: production
+  owner: group:team-order-ops
+  system: order-orchestration-system
+  definition:
+    $text: |
+      asyncapi: 2.5.0
+      info:
+        title: Order Events
+        version: 1.0.0
+      servers:
+        prod:
+          url: kafka.telco.org:9092
+          protocol: kafka
+      channels:
+        order.created:
+          description: Emitted when an order is created
+          publish:
+            message:
+              name: OrderCreated
+              contentType: application/json
+              payload:
+                type: object
+                properties:
+                  orderId: { type: string }
+                  customerId: { type: string }
+                  createdAt: { type: string, format: date-time }
+        order.completed:
+          description: Emitted when an order is fulfilled
+          publish:
+            message:
+              name: OrderCompleted
+              contentType: application/json
+              payload:
+                type: object
+                properties:
+                  orderId: { type: string }
+                  completionTime: { type: string, format: date-time }
+        order.cancelled:
+          description: Emitted when an order is cancelled
+          publish:
+            message:
+              name: OrderCancelled
+              contentType: application/json
+              payload:
+                type: object
+                properties:
+                  orderId: { type: string }
+                  reason: { type: string }
+---
+# ---- (Optional) External APIs this service consumes — stubs so relations render
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: customer-api
+  description: Customer master data API (stub for relationship graph)
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:team-order-ops
+  definition:
+    $text: |
+      openapi: 3.0.1
+      info: { title: Customer API, version: "1.0.0" }
+      paths: {}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: billing-api
+  description: Billing API (stub for relationship graph)
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:team-order-ops
+  definition:
+    $text: |
+      openapi: 3.0.1
+      info: { title: Billing API, version: "1.0.0" }
+      paths: {}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: provisioning-api
+  description: Provisioning API (stub for relationship graph)
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:team-order-ops
+  definition:
+    $text: |
+      openapi: 3.0.1
+      info: { title: Provisioning API, version: "1.0.0" }
+      paths: {}
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: notification-api
+  description: Notification API (stub for relationship graph)
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:team-order-ops
+  definition:
+    $text: |
+      openapi: 3.0.1
+      info: { title: Notification API, version: "1.0.0" }
+      paths: {}
