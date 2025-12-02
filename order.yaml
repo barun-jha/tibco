@@ -1,5 +1,5 @@
 # ============================================================
-# Backstage Catalog - Telecom Order Orchestration (Validated)
+# Telecom Order Orchestration - Full Backstage Catalog File
 # ============================================================
 
 # ---- Domain ----
@@ -9,18 +9,18 @@ metadata:
   name: telecom
   title: Telecom Domain
   description: >
-    Domain for telecom OSS/BSS order management and orchestration systems.
+    Domain representing telecom OSS/BSS systems — including CRM, Billing, and Order Orchestration.
 spec:
   owner: group:team-order-ops
 ---
-# ---- Team (Group) ----
+# ---- Team ----
 apiVersion: backstage.io/v1alpha1
 kind: Group
 metadata:
   name: team-order-ops
   title: Team Order Ops
   description: >
-    Team responsible for telecom order orchestration, provisioning, and integrations.
+    Team responsible for developing and maintaining telecom order orchestration microservices.
 spec:
   type: team
   profile:
@@ -35,7 +35,7 @@ metadata:
   name: order-orchestration-system
   title: Order Orchestration System
   description: >
-    Manages customer order lifecycle across CRM, Billing, and Provisioning systems.
+    System that manages the complete telecom order lifecycle across CRM, Billing, and Provisioning layers.
   tags:
     - telecom
     - orchestration
@@ -43,13 +43,13 @@ spec:
   owner: group:team-order-ops
   domain: telecom
 ---
-# ---- Resource: Database ----
+# ---- Resource: Order Database ----
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
   name: order-db
   title: Order Database
-  description: PostgreSQL database for storing order information.
+  description: PostgreSQL database for order management and tracking.
 spec:
   type: database
   owner: group:team-order-ops
@@ -61,7 +61,7 @@ kind: Resource
 metadata:
   name: order-events-topic
   title: Order Events Topic
-  description: Kafka topic for publishing order lifecycle events.
+  description: Kafka topic used for publishing and consuming order lifecycle events.
 spec:
   type: messaging-topic
   owner: group:team-order-ops
@@ -74,8 +74,8 @@ metadata:
   name: order-service
   title: Order Service
   description: >
-    Microservice that orchestrates telecom customer orders across CRM, Billing,
-    and Provisioning systems. Exposes REST and event-based APIs.
+    Core microservice orchestrating telecom customer orders across CRM, Billing,
+    and Provisioning systems. Provides REST and event-driven APIs.
   tags:
     - telecom
     - microservice
@@ -123,7 +123,8 @@ kind: API
 metadata:
   name: order-api
   title: Order API
-  description: REST API for creating, retrieving, and managing telecom orders.
+  description: >
+    REST API for creating, retrieving, and managing telecom orders.
   tags:
     - rest
     - orders
@@ -182,7 +183,8 @@ kind: API
 metadata:
   name: order-events-api
   title: Order Events API
-  description: Kafka topics used to publish order lifecycle events.
+  description: >
+    Kafka topics used to broadcast order lifecycle events such as order creation, completion, and cancellation.
   tags:
     - async
     - kafka
@@ -213,6 +215,7 @@ spec:
                     type: string
                   createdAt:
                     type: string
+                    format: date-time
         order.completed:
           publish:
             message:
@@ -224,6 +227,18 @@ spec:
                     type: string
                   completedAt:
                     type: string
+                    format: date-time
+        order.cancelled:
+          publish:
+            message:
+              name: OrderCancelled
+              payload:
+                type: object
+                properties:
+                  orderId:
+                    type: string
+                  reason:
+                    type: string
 ---
 # ---- External API: Billing ----
 apiVersion: backstage.io/v1alpha1
@@ -231,7 +246,7 @@ kind: API
 metadata:
   name: billing-api
   title: Billing API
-  description: External API used for validating order charges and payments.
+  description: External API used for validating and charging telecom orders.
 spec:
   type: openapi
   lifecycle: production
@@ -242,7 +257,13 @@ spec:
       info:
         title: Billing API
         version: 1.0.0
-      paths: {}
+      paths:
+        /billing/validate:
+          post:
+            summary: Validate billing for an order
+            responses:
+              "200":
+                description: Validation success
 ---
 # ---- External API: Provisioning ----
 apiVersion: backstage.io/v1alpha1
@@ -261,7 +282,13 @@ spec:
       info:
         title: Provisioning API
         version: 1.0.0
-      paths: {}
+      paths:
+        /provision/activate:
+          post:
+            summary: Activate customer service
+            responses:
+              "200":
+                description: Activated
 ---
 # ---- External API: Notification ----
 apiVersion: backstage.io/v1alpha1
@@ -269,7 +296,7 @@ kind: API
 metadata:
   name: notification-api
   title: Notification API
-  description: API for sending customer notifications (SMS/Email).
+  description: API for sending customer notifications via SMS and email.
 spec:
   type: openapi
   lifecycle: production
@@ -280,4 +307,21 @@ spec:
       info:
         title: Notification API
         version: 1.0.0
-      paths: {}
+      paths:
+        /notify:
+          post:
+            summary: Send a notification to a customer
+            requestBody:
+              required: true
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                      recipient:
+                        type: string
+            responses:
+              "200":
+                description: Notification sent successfully
