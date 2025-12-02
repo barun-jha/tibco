@@ -1,5 +1,5 @@
 # ============================================================
-# Telecom Order Orchestration - Backstage Catalog (One File)
+# Backstage Catalog - Telecom Order Orchestration (Validated)
 # ============================================================
 
 # ---- Domain ----
@@ -9,18 +9,18 @@ metadata:
   name: telecom
   title: Telecom Domain
   description: >
-    Domain for telecom OSS/BSS order management and orchestration.
+    Domain for telecom OSS/BSS order management and orchestration systems.
 spec:
   owner: group:team-order-ops
 ---
-# ---- Owner (Group / Team) ----
+# ---- Team (Group) ----
 apiVersion: backstage.io/v1alpha1
 kind: Group
 metadata:
   name: team-order-ops
   title: Team Order Ops
   description: >
-    Team responsible for the telecom order orchestration microservices and integrations.
+    Team responsible for telecom order orchestration, provisioning, and integrations.
 spec:
   type: team
   profile:
@@ -35,7 +35,7 @@ metadata:
   name: order-orchestration-system
   title: Order Orchestration System
   description: >
-    Central system managing telecom order lifecycle across CRM, Billing, and Provisioning.
+    Manages customer order lifecycle across CRM, Billing, and Provisioning systems.
   tags:
     - telecom
     - orchestration
@@ -49,7 +49,7 @@ kind: Resource
 metadata:
   name: order-db
   title: Order Database
-  description: PostgreSQL database for storing order records.
+  description: PostgreSQL database for storing order information.
 spec:
   type: database
   owner: group:team-order-ops
@@ -74,8 +74,8 @@ metadata:
   name: order-service
   title: Order Service
   description: >
-    Microservice that orchestrates customer orders across CRM, Billing, and
-    Provisioning systems. Provides REST and event-based APIs.
+    Microservice that orchestrates telecom customer orders across CRM, Billing,
+    and Provisioning systems. Exposes REST and event-based APIs.
   tags:
     - telecom
     - microservice
@@ -117,14 +117,13 @@ spec:
       title: PagerDuty Alerts
       icon: pagerduty
 ---
-# ---- API: REST (Order API) ----
+# ---- REST API: Order API ----
 apiVersion: backstage.io/v1alpha1
 kind: API
 metadata:
   name: order-api
   title: Order API
-  description: >
-    REST API for creating, retrieving, and managing telecom customer orders.
+  description: REST API for creating, retrieving, and managing telecom orders.
   tags:
     - rest
     - orders
@@ -150,34 +149,40 @@ spec:
                   schema:
                     type: object
                     properties:
-                      customerId: { type: string }
-                      productCode: { type: string }
-                      quantity: { type: integer }
+                      customerId:
+                        type: string
+                      productCode:
+                        type: string
+                      quantity:
+                        type: integer
             responses:
-              '201': { description: Created }
+              "201":
+                description: Order created successfully
           get:
-            summary: Get all orders
+            summary: Retrieve all orders
             responses:
-              '200': { description: Success }
+              "200":
+                description: Success
         /orders/{orderId}:
           get:
-            summary: Get order by ID
+            summary: Retrieve order by ID
             parameters:
-              - in: path
-                name: orderId
+              - name: orderId
+                in: path
                 required: true
-                schema: { type: string }
+                schema:
+                  type: string
             responses:
-              '200': { description: Success }
+              "200":
+                description: Success
 ---
-# ---- API: Async (Kafka Events) ----
+# ---- Async API: Order Events ----
 apiVersion: backstage.io/v1alpha1
 kind: API
 metadata:
   name: order-events-api
   title: Order Events API
-  description: >
-    Kafka topics used by Order Service to broadcast lifecycle events.
+  description: Kafka topics used to publish order lifecycle events.
   tags:
     - async
     - kafka
@@ -204,8 +209,10 @@ spec:
               payload:
                 type: object
                 properties:
-                  orderId: { type: string }
-                  createdAt: { type: string, format: date-time }
+                  orderId:
+                    type: string
+                  createdAt:
+                    type: string
         order.completed:
           publish:
             message:
@@ -213,16 +220,18 @@ spec:
               payload:
                 type: object
                 properties:
-                  orderId: { type: string }
-                  completedAt: { type: string, format: date-time }
+                  orderId:
+                    type: string
+                  completedAt:
+                    type: string
 ---
-# ---- API: External Billing ----
+# ---- External API: Billing ----
 apiVersion: backstage.io/v1alpha1
 kind: API
 metadata:
   name: billing-api
   title: Billing API
-  description: External Billing API used for order charge validation.
+  description: External API used for validating order charges and payments.
 spec:
   type: openapi
   lifecycle: production
@@ -235,13 +244,13 @@ spec:
         version: 1.0.0
       paths: {}
 ---
-# ---- API: External Provisioning ----
+# ---- External API: Provisioning ----
 apiVersion: backstage.io/v1alpha1
 kind: API
 metadata:
   name: provisioning-api
   title: Provisioning API
-  description: External Provisioning API for service activation.
+  description: API for activating telecom services after order fulfillment.
 spec:
   type: openapi
   lifecycle: production
@@ -254,13 +263,13 @@ spec:
         version: 1.0.0
       paths: {}
 ---
-# ---- API: External Notification ----
+# ---- External API: Notification ----
 apiVersion: backstage.io/v1alpha1
 kind: API
 metadata:
   name: notification-api
   title: Notification API
-  description: External Notification API for SMS/Email updates.
+  description: API for sending customer notifications (SMS/Email).
 spec:
   type: openapi
   lifecycle: production
