@@ -1,0 +1,65 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: order-service
+  title: Order Service
+  description: >
+    Microservice responsible for orchestrating telecom order workflows
+    across CRM, billing, and provisioning systems.
+  tags:
+    - telecom
+    - microservice
+    - orders
+    - orchestration
+  annotations:
+    github.com/project-slug: telco-org/order-service
+    backstage.io/techdocs-ref: dir:.
+    backstage.io/kubernetes-id: order-service
+    backstage.io/kubernetes-namespace: telco-prod
+    backstage.io/ci-build: https://github.com/telco-org/order-service/actions
+    sonarcloud.io/project-key: telco-org_order-service
+    pagerduty.com/service-id: P123456
+spec:
+  type: service
+  system: order-orchestration-system
+  lifecycle: production
+  owner: team-order-ops
+  providesApis:
+    - order-api
+  consumesApis:
+    - customer-api
+    - billing-api
+    - provisioning-api
+  dependsOn:
+    - resource:postgres/order-db
+    - resource:kafka/order-topic
+  deployment:
+    environment: production
+    region: ap-south-1
+    replicas: 3
+    container:
+      image: telco-org/order-service:1.0.3
+      ports:
+        - name: http
+          port: 8080
+      env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: prod
+        - name: LOG_LEVEL
+          value: INFO
+  links:
+    - url: https://github.com/telco-org/order-service
+      title: Source Code
+      icon: github
+    - url: https://telco-org.github.io/order-service/
+      title: Documentation
+      icon: docs
+    - url: https://grafana.telco.org/d/order-service
+      title: Monitoring Dashboard
+      icon: grafana
+    - url: https://kibana.telco.org/app/discover#/order-service
+      title: Logs
+      icon: logs
+    - url: https://pagerduty.com/services/P123456
+      title: PagerDuty
+      icon: pagerduty
