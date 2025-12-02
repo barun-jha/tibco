@@ -4,49 +4,97 @@ metadata:
   name: order-service
   title: Order Service
   description: >
-    Microservice responsible for orchestrating telecom order workflows
-    across CRM, billing, and provisioning systems.
+    The Order Service is a core telecom microservice responsible for orchestrating
+    customer order workflows across CRM, Billing, and Provisioning systems.
+    It ensures order validation, enrichment, decomposition, and fulfillment
+    through standardized APIs and asynchronous event flows.
   tags:
     - telecom
     - microservice
     - orders
     - orchestration
+    - integration
+  labels:
+    domain: order-management
+    business-criticality: high
+    data-classification: internal
   annotations:
     github.com/project-slug: telco-org/order-service
     backstage.io/techdocs-ref: dir:.
     backstage.io/kubernetes-id: order-service
     backstage.io/kubernetes-namespace: telco-prod
     backstage.io/ci-build: https://github.com/telco-org/order-service/actions
+    backstage.io/docker-build: https://hub.docker.com/r/telco-org/order-service
     sonarcloud.io/project-key: telco-org_order-service
     pagerduty.com/service-id: P123456
+    grafana/dashboard-url: https://grafana.telco.org/d/order-service
+    kibana/dashboard-url: https://kibana.telco.org/app/discover#/order-service
+    jira/project-key: ORDEROPS
 spec:
   type: service
   system: order-orchestration-system
   lifecycle: production
   owner: team-order-ops
+
+  # -------------------------------
+  # API Relationships
+  # -------------------------------
   providesApis:
     - order-api
+
   consumesApis:
     - customer-api
     - billing-api
     - provisioning-api
+    - notification-api
+
+  # -------------------------------
+  # Dependencies (Infra / Messaging / Data)
+  # -------------------------------
   dependsOn:
     - resource:postgres/order-db
     - resource:kafka/order-topic
+    - resource:redis/order-cache
+    - resource:elasticsearch/order-index
+
+  # -------------------------------
+  # Deployment Metadata (Custom Extension)
+  # -------------------------------
   deployment:
     environment: production
     region: ap-south-1
     replicas: 3
+    strategy: rolling-update
+    uptime-sla: "99.95%"
     container:
       image: telco-org/order-service:1.0.3
+      registry: docker.io
       ports:
         - name: http
           port: 8080
+        - name: metrics
+          port: 9090
       env:
         - name: SPRING_PROFILES_ACTIVE
           value: prod
         - name: LOG_LEVEL
           value: INFO
+        - name: KAFKA_BROKER_URL
+          valueFrom:
+            secretKeyRef:
+              name: kafka-config
+              key: broker-url
+    autoscaling:
+      minReplicas: 3
+      maxReplicas: 10
+      cpuThreshold: 75
+    ingress:
+      host: order.telco.org
+      tls: true
+
+  # -------------------------------
+  # Monitoring, Documentation & Links
+  # -------------------------------
   links:
     - url: https://github.com/telco-org/order-service
       title: Source Code
@@ -55,11 +103,26 @@ spec:
       title: Documentation
       icon: docs
     - url: https://grafana.telco.org/d/order-service
-      title: Monitoring Dashboard
+      title: Grafana Dashboard
       icon: grafana
     - url: https://kibana.telco.org/app/discover#/order-service
-      title: Logs
+      title: Log Analysis
       icon: logs
     - url: https://pagerduty.com/services/P123456
-      title: PagerDuty
+      title: PagerDuty Alerts
       icon: pagerduty
+    - url: https://jira.telco.org/projects/ORDEROPS
+      title: Jira Board
+      icon: jira
+    - url: https://confluence.telco.org/display/ORDEROPS/Order+Service+Design
+      title: Confluence Design Docs
+      icon: docs
+    - url: https://argocd.telco.org/applications/order-service
+      title: ArgoCD Deployment
+      icon: kubernetes
+    - url: https://jenkins.telco.org/job/order-service/
+      title: Jenkins CI/CD Pipeline
+      icon: build
+    - url: https://sonarcloud.io/dashboard?id=telco-org_order-service
+      title: SonarCloud Code Quality
+      icon: quality
